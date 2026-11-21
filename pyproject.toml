@@ -1,0 +1,85 @@
+[project]
+name = "life-agent"
+version = "0.1.0"
+description = "Proactive multi-platform personal life orchestrator Agent powered by AstrBot platform adapters as an independent process"
+requires-python = ">=3.12"
+dependencies = [
+  # Core Agent & Web/CLI
+  "openai>=1.78.0",
+  "pydantic>=2.12.0",
+  "pyyaml>=6.0.2",
+  "aiosqlite>=0.21.0",
+  "aiohttp>=3.11.18",
+  "httpx[socks]>=0.28.1",
+  "fastapi>=0.124.0",
+  "python-multipart>=0.0.20",
+  "uvicorn>=0.34.0",
+  "feedparser>=6.0.11",
+  "click>=8.2.0",
+  "rich>=13.9.0",
+  "tenacity>=9.1.0",
+  # Slow Loop BM25 Retrieval & Schedule/Shift Auto-Importer (Excel + Image)
+  "rank-bm25>=0.2.2",
+  "jieba>=0.42.1",
+  "openpyxl>=3.1.5",
+  "xlrd>=2.0.1",
+  # AstrBot PlatformManager & Core Adapters (QQ OneBot v11 + Official Personal WeChat weixin_oc)
+  "aiocqhttp>=1.4.4",
+  "apscheduler>=3.11.0",
+  "anthropic>=0.51.0",
+  "google-genai>=1.56.0",
+  "qrcode>=8.2",
+  "pillow>=11.2.1",
+  "cryptography>=44.0.3",
+  "pycryptodome>=3.21.0",
+  "deprecated>=1.2.18",
+  "filelock>=3.18.0",
+  "loguru>=0.7.2",
+  "sqlalchemy[asyncio]>=2.0.41",
+  "sqlmodel>=0.0.24",
+  "aiofiles>=25.1.0",
+  "quart>=0.20.0",
+  "websockets>=15.0.1",
+  "psutil>=5.8.0,<7.2.0",
+  "chardet~=5.1.0",
+  "packaging>=24.2",
+  "docstring-parser>=0.16",
+  "opentelemetry-api>=1.45.1,<2",
+  "opentelemetry-sdk>=1.45.1,<2",
+  "pyjwt>=2.10.1",
+  "certifi>=2026.10.19",
+  "ormsgpack>=1.9.1",
+  "watchfiles>=1.0.5",
+  "mcp>=1.8.0,<2",
+]
+
+[project.optional-dependencies]
+all-platforms = [
+  "python-telegram-bot>=22.6",
+  "telegramify-markdown>=1.0.0",
+  "py-cord>=2.6.1",
+  "lark-oapi>=1.4.15",
+  "dingtalk-stream>=0.22.1",
+  "slack-sdk>=3.35.0",
+  "qq-botpy==1.2.1",
+  "wechatpy>=1.8.18",
+]
+dev = [
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.25.0",
+]
+
+[project.scripts]
+life-agent = "life_agent.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/life_agent"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]

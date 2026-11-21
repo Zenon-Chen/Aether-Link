@@ -1,0 +1,260 @@
+# ==============================================================================
+# Life Agent Configuration
+# 复制本文件为 config.yaml 并填写你的 API Key、QQ 号与平台配置
+# ==============================================================================
+
+data_dir: ./data
+plugins_dir: ./plugins
+db_path: ./data/life_agent.db
+
+# 1. 大模型配置（任意 OpenAI 兼容接口：DeepSeek / Qwen / OpenAI / OpenRouter / Ollama 等）
+# 支持按模块独立指定模型：structurer / gateway / rtir 可用快速便宜模型，chat 可用更强模型
+llm:
+  default:
+    base_url: "https://api.deepseek.com/v1"
+    api_key: "${OPENAI_API_KEY:-sk-replace-me}"
+    model: "deepseek-chat"
+    temperature: 0.3
+    max_tokens: 2048
+    timeout_seconds: 60.0
+  # structurer:
+  #   base_url: "https://api.deepseek.com/v1"
+  #   api_key: "${OPENAI_API_KEY}"
+  #   model: "deepseek-chat"
+  # gateway:
+  #   base_url: "https://api.deepseek.com/v1"
+  #   api_key: "${OPENAI_API_KEY}"
+  #   model: "deepseek-chat"
+  # chat:
+  #   base_url: "https://api.deepseek.com/v1"
+  #   api_key: "${OPENAI_API_KEY}"
+  #   model: "deepseek-chat"
+  #   temperature: 0.6
+  # rtir:
+  #   base_url: "https://api.deepseek.com/v1"
+  #   api_key: "${OPENAI_API_KEY}"
+  #   model: "deepseek-chat"
+  # 图片课表/排班表识别使用的多模态视觉模型（若 default 不支持图片，请在此单独配置视觉模型）
+  # vision:
+  #   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  #   api_key: "${DASHSCOPE_API_KEY}"
+  #   model: "qwen-vl-max"
+  # 夜间 23:30 上行复盘演化 grade 使用的模型（默认复用 gateway/default）
+  # reflector:
+  #   base_url: "https://api.deepseek.com/v1"
+  #   api_key: "${OPENAI_API_KEY}"
+  #   model: "deepseek-chat"
+
+# 2. 用户身份与校园作息配置
+owner:
+  name: "主人"
+  timezone: "Asia/Shanghai"
+  # 你的个人 QQ 号（用于主动推送与识别你的直接对话）
+  qq_id: "123456789"
+  qq_platform_id: "qq_onebot"
+  # 官方个人微信直连用户 ID（如 xxx@im.wechat；可留空，扫码后发一条消息会自动识别）
+  weixin_user_id: ""
+  weixin_platform_id: "weixin_personal"
+  # 课节时间对照表（用于把“第四节”“下午第一节”等自然语言精确换算为起止时间）
+  school_periods:
+    第一节: "08:00-08:45"
+    第二节: "08:55-09:40"
+    第三节: "10:00-10:45"
+    第四节: "10:55-11:40"
+    第五节: "14:00-14:45"
+    第六节: "14:55-15:40"
+    第七节: "16:00-16:45"
+    第八节: "16:55-17:40"
+    第九节: "19:00-19:45"
+    第十节: "19:55-20:40"
+  persona_notes: >-
+    用户是一名高校学生，希望你在正确的时间叫起床、提醒吃什么、提醒去哪栋教学楼上课、
+    中午建议吃什么以及回家还是回寝室睡觉、下午提醒上课地点、晚上建议要不要去校园跑，
+    课间和空闲时推送有趣的新闻、新论文以及值得参与的群聊讨论。
+  # T3 长期稳定生活基线配置（写入 T3 持久态，不随每日清零）
+  living_profile:
+    wakeup_lead_minutes: 40         # 有早课时在第一节课前 40 分钟动态叫起床
+    weekday_latest_wakeup: "08:30"  # 工作日无早课时的最晚起床时间
+    weekend_wakeup: "09:30"         # 周末无早课时的起床时间
+    sleep_start_hour: 23
+    sleep_end_hour: 7
+    home_min_gap_minutes: 150       # 午休空档 >= 150 分钟建议回家，否则回寝室
+    weekly_campus_run_target: 3
+    favorite_breakfasts: ["豆浆油条", "肉包配小米粥", "鸡蛋灌饼", "三明治配热牛奶", "热干面"]
+    favorite_lunches: ["二食堂麻辣香锅", "一食堂滑蛋盖饭", "轻食鸡胸肉沙拉", "兰州牛肉面", "木桶饭"]
+    favorite_dinners: ["三食堂黄焖鸡", "番茄鸡蛋面", "烤肉拌饭", "清淡小炒套餐", "水饺"]
+    dorm_notes: "回寝室步行约 8 分钟，适合短午休"
+    home_notes: "回家单程约 30 分钟，适合下午无课或午休间隔大于 2.5 小时"
+
+# 3. 群聊过滤与 5 分钟安静窗口汇总
+group_filter:
+  silence_seconds: 300        # 群聊 5 分钟无人发言后自动送入 Structurer Sub-Agent
+  dedup_window_seconds: 600   # 重复消息去重窗口
+  jielong_mode: "keep_header_only"  # "drop" 完全丢弃接龙 | "keep_header_only" 仅保留一行主题摘要
+  min_jielong_lines: 3
+  max_buffer_messages: 200
+
+# 3.5 慢回路 BM25 配置（存放无确定时间的想法与一周之外的安排/任务，按需由 LLM 工具检索）
+slow_loop:
+  enabled: true
+  horizon_days: 7                   # 7天内走快回路时间表，7天外走慢回路 BM25
+  default_top_k: 8
+  auto_promote_interval_seconds: 3600  # 每小时检查一次：进入 7 天窗口的慢回路日程自动升入时间表并写入被动触发器
+
+# 3.6 课表与排班表自动导入模块（支持 Excel .xlsx/.xls/.csv 与图片）
+schedule_importer:
+  default_reminder_lead_minutes: 20 # 7天内课表/排班提前多少分钟写入被动触发器
+  default_expand_weeks: 8           # 周期性课表未标明结束周时的默认展开周数
+  max_excel_rows_per_sheet: 200
+  default_priority: 9.0
+
+# 3.7 v2 上下行解耦动态门控、四级状态保质期与信息源信任防火墙
+gating_evolution:
+  nightly_reflection_time: "23:30"     # 长节拍上行复盘：每晚 23:30 集中演化 grade 分级器
+  auto_publish_inferred_rules: false   # 方案A：明示偏好夜间自动合入，系统推测规则先入 candidate 待确认
+  max_active_rules: 25
+  max_starvation_boost: 2.0            # 饥饿补偿严格封顶，防低质新闻膨胀成假紧急
+  non_urgent_push_cooldown_minutes: 25.0
+  digest_max_items: 3                  # 课间/空档打包上限（合并成 1 条消息）
+  urgent_pierce_threshold: 8.5         # 紧急度 >= 8.5 才可穿透上课/睡眠/勿扰硬护栏
+  t1_daily_reset_hour: 4               # T1 当日态每日 04:00 自动清零
+  t2_default_ttl_days: 5               # T2 跨日持续态（如身体不适/考试周）默认 5 天，到期前温和确认
+  t2_renewal_lead_hours: 24.0
+  max_t0_ambient_notes: 8
+  high_trust_senders: ["班长", "学委", "辅导员", "班主任", "教务处", "助教", "导师"]
+  high_trust_channels: []
+
+# 4. 消息网关（分级标准 + 退回缓冲区加权防饿死）
+gateway:
+  weight_boost_on_return: 1.5     # 每次被退回缓冲区自动加权 +1.5
+  max_weight: 10.0
+  return_retry_minutes: 30.0      # 退回后多久再次进入重评队列
+  max_returns: 8
+  buffer_ttl_hours: 36.0
+  buffer_sweep_interval_seconds: 900
+  sweep_batch_size: 5
+
+# 5. 工作状态区与 RTIR 3 分钟静默解析器（严格不使用 RAG）
+working_state:
+  max_context_messages: 40
+  rtir_silence_seconds: 180   # 对话后用户 3 分钟无回应 -> 自动触发 RTIR 写回时间表与 URTI
+
+# 6. QQ 主动推送 + 5 分钟未回复自动转官方个人微信直连（方案 B：打包后全量容灾）
+delivery:
+  failover_timeout_seconds: 300   # 5 分钟无回应切微信再发一次
+  failover_prefix: "【QQ 5分钟未回复·微信提醒】\n"
+  failover_immediately_on_qq_error: true
+  failover_min_urgency: 0.0       # 0.0 = 全量容灾（打包后所有主动推送 5 分钟未回一律切微信）
+
+# 7. 被动触发器（每天特定时段发送固定结构化指令到消息网关）
+passive_triggers:
+  enabled: true
+  tick_interval_seconds: 20
+  timetable_reminder_lead_minutes: 15
+  slots:
+    - name: "morning_wakeup"
+      time: "07:20"
+      directive: "早上叫用户起床，结合今日时间表告知早餐吃什么、第一节课时间和要去哪栋教学楼。"
+      priority: 9.5
+      enabled: true
+    - name: "morning_break_digest"
+      time: "09:45"
+      directive: "上午课间巡检：检查缓冲区高权重的新闻、新论文和群聊讨论，挑有趣的简短告诉用户并问要不要参加讨论。"
+      priority: 7.0
+      enabled: true
+    - name: "lunch_and_nap"
+      time: "11:45"
+      directive: "中午提醒：告诉用户中午吃什么，并结合下午课程间隔和当前状态建议中午回家还是回寝室睡觉。"
+      priority: 9.0
+      enabled: true
+    - name: "afternoon_class"
+      time: "13:40"
+      directive: "下午上课前提醒：检查下午时间表，告诉用户去哪栋教学楼上课及注意事项。"
+      priority: 9.0
+      enabled: true
+    - name: "afternoon_break_digest"
+      time: "15:45"
+      directive: "下午课间/空闲巡检：汇报缓冲区中值得关注的新闻、arXiv新论文和群聊讨论，问用户要不要参与。"
+      priority: 7.0
+      enabled: true
+    - name: "evening_campus_run"
+      time: "19:30"
+      directive: "晚间安排提醒：结合当前Scene state和晚间时间表，建议今晚要不要去校园跑以及晚间安排。"
+      priority: 8.5
+      enabled: true
+    - name: "night_wrapup"
+      time: "22:45"
+      directive: "睡前梳理：简短告知明天的重要课程和DDL，提醒早点休息。"
+      priority: 8.0
+      enabled: true
+
+# 8. AstrBot 平台模块配置（作为独立进程内的 I/O 模块，不是 AstrBot 插件！）
+# 支持 AstrBot 全部 17+ 平台适配器：aiocqhttp, weixin_oc, telegram, discord, lark, dingtalk, wecom, slack, kook, line, satori, misskey, mattermost 等
+astrbot:
+  enabled: true
+  astrbot_repo_path: "./vendor/AstrBot"
+  astrbot_data_root: "./data/astrbot"
+  platform_settings:
+    unique_session: true
+  platforms:
+    # (1) QQ 平台：OneBot v11 反向 WebSocket（对接 NapCat / Lagrange / LLOneBot）
+    - id: "qq_onebot"
+      type: "aiocqhttp"
+      enable: true
+      ws_reverse_host: "0.0.0.0"
+      ws_reverse_port: 6199
+      ws_reverse_token: ""
+
+    # (2) 微信平台：官方个人微信直连（AstrBot weixin_oc / ilinkai.weixin.qq.com）
+    # 运行 `uv run life-agent weixin-login` 或在控制台点击“官方个人微信扫码登录”即可扫码绑定
+    - id: "weixin_personal"
+      type: "weixin_oc"
+      enable: true
+      weixin_oc_base_url: "https://ilinkai.weixin.qq.com"
+      weixin_oc_cdn_base_url: "https://novac2c.cdn.weixin.qq.com/c2c"
+      weixin_oc_bot_type: "3"
+      weixin_oc_token: ""
+      weixin_oc_account_id: ""
+      weixin_oc_qr_poll_interval: 1
+      weixin_oc_long_poll_timeout_ms: 35000
+      weixin_oc_api_timeout_ms: 120000
+
+    # (3) 如需接入其他 AstrBot 支持的平台（需先 `uv sync --extra all-platforms`），取消注释即可：
+    # - id: "tg_main"
+    #   type: "telegram"
+    #   enable: false
+    #   token: "YOUR_TG_BOT_TOKEN"
+    # - id: "discord_main"
+    #   type: "discord"
+    #   enable: false
+    #   token: "YOUR_DISCORD_BOT_TOKEN"
+    # - id: "lark_main"
+    #   type: "lark"
+    #   enable: false
+    #   app_id: ""
+    #   app_secret: ""
+
+# 9. RSS 新闻监控插件
+rss:
+  enabled: true
+  poll_interval_seconds: 1800
+  max_items_per_feed: 5
+  feeds:
+    - name: "Hacker News"
+      url: "https://hnrss.org/frontpage"
+    - name: "少数派"
+      url: "https://sspai.com/feed"
+
+# 10. arXiv 新论文监控插件
+arxiv:
+  enabled: true
+  poll_interval_seconds: 3600
+  categories: ["cs.AI", "cs.CL", "cs.LG"]
+  keywords: []
+  max_results: 8
+
+# 11. 本地可视化控制台 & Webhook 入口
+web:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8765
